@@ -1,0 +1,8 @@
+[opener]
+edit = [{ run = 'nvim "$@"', desc = "Edit in nvim", block = true }]
+
+[filetype]
+rules = []
+
+[open]
+rules = []

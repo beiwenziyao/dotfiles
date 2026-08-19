@@ -1,0 +1,93 @@
+keybinds {
+    normal {
+        bind "Alt y" {
+            NewPane {
+                command "yazi"
+                name "Yazi"
+            }
+        }
+    }
+    shared_except "locked" {
+        bind "Ctrl g" { SwitchToMode "Locked"; }
+        bind "Ctrl q" { Quit; }
+        bind "Alt f" { ToggleFloatingPanes; }
+        bind "Alt n" { NewPane; }
+        bind "Alt h" "Alt Left" { MoveFocusOrTab "Left"; }
+        bind "Alt l" "Alt Right" { MoveFocusOrTab "Right"; }
+        bind "Alt j" "Alt Down" { MoveFocus "Down"; }
+        bind "Alt k" "Alt Up" { MoveFocus "Up"; }
+        bind "Alt [" { PreviousSwapLayout; }
+        bind "Alt ]" { NextSwapLayout; }
+        bind "Alt =" "Alt +" { Resize "Increase"; }
+        bind "Alt -" { Resize "Decrease"; }
+    }
+}
+
+plugins {
+    tab-bar location="zellij:tab-bar"
+    status-bar location="zellij:status-bar"
+    strider location="zellij:strider"
+    compact-bar location="zellij:compact-bar"
+    session-manager location="zellij:session-manager"
+}
+
+themes {
+    codex_neon {
+        fg 205 214 244
+        bg 17 17 27
+        black 24 24 37
+        red 243 139 168
+        green 166 227 161
+        yellow 249 226 175
+        blue 137 180 250
+        magenta 203 166 247
+        cyan 137 220 235
+        white 205 214 244
+        orange 250 179 135
+        text_unselected {
+            base 205 214 244
+            background 24 24 37
+            emphasis_0 137 180 250
+            emphasis_1 249 226 175
+            emphasis_2 166 227 161
+            emphasis_3 250 179 135
+        }
+        text_selected {
+            base 17 17 27
+            background 249 226 175
+            emphasis_0 243 139 168
+            emphasis_1 137 180 250
+            emphasis_2 166 227 161
+            emphasis_3 203 166 247
+        }
+        ribbon_unselected {
+            base 205 214 244
+            background 49 50 68
+            emphasis_0 137 180 250
+            emphasis_1 249 226 175
+            emphasis_2 166 227 161
+            emphasis_3 250 179 135
+        }
+        ribbon_selected {
+            base 17 17 27
+            background 137 220 235
+            emphasis_0 17 17 27
+            emphasis_1 243 139 168
+            emphasis_2 203 166 247
+            emphasis_3 249 226 175
+        }
+    }
+}
+
+theme "codex_neon"
+default_layout "codex"
+simplified_ui false
+pane_frames true
+auto_layout true
+session_serialization true
+copy_on_select true
+scroll_buffer_size 20000
+scrollback_editor "nvim"
+show_startup_tips false
+show_release_notes false
+default_shell "bash"

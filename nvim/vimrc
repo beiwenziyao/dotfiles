@@ -1,0 +1,82 @@
+let g:plug_threads = 1
+call plug#begin()		" Begin Vim-Plug plugin manager configuration
+"nerdtree"
+Plug 'preservim/nerdtree'
+"tagbar"
+Plug 'preservim/tagbar'
+" vim-airline
+Plug 'vim-airline/vim-airline'
+Plug 'vim-airline/vim-airline-themes'
+" NERDCommenter
+Plug 'preservim/nerdcommenter'
+" vim-illuminate
+Plug 'rrethy/vim-illuminate'
+" IndentLine
+Plug 'Yggdroot/indentLine'
+call plug#end()			" End Vim-Plug plugin manager configuration
+
+
+syntax on               " Set syntax highlighting
+set number              " Set the line number
+set tabstop=4           " Set an indent to account for 4 spaces
+set autoindent          " Set up automatic indentation
+set mouse=a             " Set mouse is always available, set mouse= (empty) cancel
+set cc=80               " Column 80 highlighted, set cc=0 cancellation
+set cursorline          " Settings to highlight the current row
+set cindent             " Format C language
+set softtabstop=4       " Set the width of the soft tab to 4 spaces
+set shiftwidth=4   " The width automatically indented when setting a new line is 4 spaces
+
+set sts=4               " Set the number of spaces inserted when the Tab key is pressed in insertion mode to 4
+set ruler               " Show the status of the last line
+set showmode            " The status of this row is displayed in the lower left corner.
+set bg=dark             " Show different background tones
+set hlsearch            " Enable Search Highlight
+set laststatus=2        " Always display the status bar
+
+hi illuminatedWord ctermfg=white ctermbg=99
+
+" Set the mapleader to a space character.
+let mapleader = ' '
+
+" Set Automatically Complete Parentheses
+inoremap ' ''<ESC>i
+inoremap " ""<ESC>i
+inoremap ( ()<ESC>i
+inoremap [ []<ESC>i
+inoremap < <><ESC>i
+inoremap { {<CR>}<ESC>O
+
+" Configure the NERDTree plugin mapping button
+" Automatically open NERDTree after opening the file
+" autocmd VimEnter * NERDTree
+" Key F2: Map other tabs
+map <F2> :NERDTreeMirror<CR>
+" Key F3: Expand/shrink NERDTree
+map <F3> :NERDTreeToggle<CR>
+" Key f: In the NERDTree window, jump the cursor to the currently open file.
+map f :NERDTreeFind<CR>
+" Key 1: Switch to the previous tab
+map 1 :tabp<CR>
+" Key 2: Switch to the next tab
+map 2 :tabn<CR>
+
+" Configure the Tagbar plugin mapping button
+" Set the plug-in of ctags used by tagbar
+let g:tagbar_ctags_bin='/usr/bin/ctags'
+" Key F4: Shrink/Expand Tagbar Window
+map <F4> :TagbarToggle<CR>
+" Set the window width of tagbar to 35
+let g:tagbar_width = 35
+" Append the C/C++standard library header file to tags
+set tags+=/usr/include/tags
+" Open the tagbar automatically when opening the file
+" autocmd BufReadPost *.cpp,*.c,*.h,*.cc,*.cxx call tagbar#autoopen()
+
+" IndentLine
+" Enable IndentLine plugin
+let g:indentLine_enabled = 1
+" Set the characters for the indentation line, with a default value of '|'
+let g:indentLine_char = '¦'
+" Make the plugin run properly
+let g:indentLine_conceallevel = 2

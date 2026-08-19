@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# dotfiles 一键安装脚本
+# 安装 zellij / nvim / yazi 并链接配置到 $HOME
+# 用法: ./install.sh [--dry-run]
+set -euo pipefail
+
+DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DRY_RUN="${1:-}"
+
+say()  { printf '\033[1;32m[+] %s\033[0m\n' "$*"; }
+warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; }
+
+# 国内网络可用 GitHub 镜像前缀, 如: GITHUB_MIRROR=https://mirror.ghproxy.com/
+GITHUB_MIRROR="${GITHUB_MIRROR:-}"
+
+ARCH="$(uname -m)"
+case "$ARCH" in
+  x86_64)  RUST_ARCH="x86_64" ;;
+  aarch64) RUST_ARCH="aarch64" ;;
+  *)       RUST_ARCH="$ARCH" ;;
+esac
+
+install_zellij() {
+  command -v zellij >/dev/null 2>&1 && { say "zellij 已存在: $(zellij --version)"; return; }
+  say "安装 zellij..."
+  local ver
+  ver="$(curl -s https://api.github.com/repos/zellij-org/zellij/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)"
+  [ -n "$ver" ] || ver="v0.44.3"
+  local url="${GITHUB_MIRROR}https://github.com/zellij-org/zellij/releases/download/${ver}/zellij-${RUST_ARCH}-unknown-linux-musl.tar.gz"
+  local tmp
+  tmp="$(mktemp -d)"
+  curl -sL "$url" | tar xz -C "$tmp"
+  install -m 755 "$tmp/zellij" "$HOME/.local/bin/zellij"
+  rm -rf "$tmp"
+  say "zellij ${ver} 已装到 ~/.local/bin"
+}
+
+install_yazi() {
+  command -v yazi >/dev/null 2>&1 && { say "yazi 已存在: $(yazi --version)"; return; }
+  say "安装 yazi (cargo, 国内镜像 rsproxy.cn, 编译约 5-10 分钟)..."
+  CARGO_REGISTRIES_CRATES_IO_INDEX="sparse+https://rsproxy.cn/index/" \
+    cargo install --locked yazi-fm yazi-cli
+  say "yazi 已装到 ~/.cargo/bin"
+}
+
+install_nvim() {
+  command -v nvim >/dev/null 2>&1 && { say "nvim 已存在: $(nvim --version | head -1)"; return; }
+  say "安装 neovim (apt)..."
+  sudo apt-get update
+  sudo apt-get install -y neovim
+}
+
+install_vim_plug() {
+  if [ ! -f "$HOME/.vim/autoload/plug.vim" ]; then
+    say "安装 vim-plug..."
+    curl -fLo "$HOME/.vim/autoload/plug.vim" --create-dirs \
+      "${GITHUB_MIRROR}https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+  fi
+  say "运行 :PlugInstall 安装 vim 插件 (进入 nvim 后执行 PlugInstall)"
+}
+
+link() {
+  local src="$1" dst="$2"
+  if [ -e "$dst" ] || [ -L "$dst" ]; then
+    if [ "$(readlink -f "$dst")" = "$src" ]; then
+      say "已链接: $dst"
+      return
+    fi
+    mv "$dst" "${dst}.bak.$(date +%Y%m%d%H%M%S)"
+    warn "原文件已备份: ${dst}.bak.*"
+  fi
+  mkdir -p "$(dirname "$dst")"
+  ln -s "$src" "$dst"
+  say "链接: $dst -> $src"
+}
+
+main() {
+  mkdir -p "$HOME/.local/bin"
+  install_zellij
+  install_yazi
+  install_nvim
+  install_vim_plug
+
+  link "$DOTFILES/zellij/config.kdl"        "$HOME/.config/zellij/config.kdl"
+  link "$DOTFILES/zellij/layouts/codex.kdl" "$HOME/.config/zellij/layouts/codex.kdl"
+  link "$DOTFILES/nvim/init.vim"            "$HOME/.config/nvim/init.vim"
+  link "$DOTFILES/nvim/vimrc"               "$HOME/.vimrc"
+  link "$DOTFILES/yazi/yazi.toml"           "$HOME/.config/yazi/yazi.toml"
+
+  say "完成! 首次启动 nvim 后执行 :PlugInstall 安装插件"
+  say "在 zellij 里按 Alt+y 即可弹出 yazi"
+}
+
+main
