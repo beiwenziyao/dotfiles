@@ -37,10 +37,31 @@ install_zellij() {
 
 install_yazi() {
   command -v yazi >/dev/null 2>&1 && { say "yazi 已存在: $(yazi --version)"; return; }
-  say "安装 yazi (cargo, 国内镜像 rsproxy.cn, 编译约 5-10 分钟)..."
+
+  say "安装 yazi: 优先 snap, 其次 GitHub release, 最后 cargo(yazi-build)..."
+  if command -v snap >/dev/null 2>&1 && [ -n "$WSL_DISTRO_NAME" ]; then
+    warn "WSL 下 snap 版 yazi 需 XDG_RUNTIME_DIR 可写 (bashrc 已处理)"
+    sudo snap install yazi --classic && return
+  fi
+
+  local ver url tmp
+  ver="$(curl -s https://api.github.com/repos/sxyazi/yazi/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)"
+  if [ -n "$ver" ]; then
+    url="${GITHUB_MIRROR}https://github.com/sxyazi/yazi/releases/download/${ver}/yazi-${RUST_ARCH}-unknown-linux-gnu.zip"
+    tmp="$(mktemp -d)"
+    if curl -sL "$url" -o "$tmp/yazi.zip"; then
+      unzip -q -o "$tmp/yazi.zip" -d "$tmp"
+      install -m 755 "$tmp/yazi-${RUST_ARCH}-unknown-linux-gnu/yazi" "$HOME/.local/bin/yazi"
+      rm -rf "$tmp"
+      say "yazi 已装到 ~/.local/bin"
+      return
+    fi
+    rm -rf "$tmp"
+  fi
+
   CARGO_REGISTRIES_CRATES_IO_INDEX="sparse+https://rsproxy.cn/index/" \
-    cargo install --locked yazi-fm yazi-cli
-  say "yazi 已装到 ~/.cargo/bin"
+    cargo install --locked yazi-build
+  ~/.cargo/bin/yazi-build install
 }
 
 install_nvim() {

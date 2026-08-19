@@ -37,12 +37,23 @@ GITHUB_MIRROR=https://mirror.ghproxy.com/ ./install.sh
 curl -sL https://github.com/zellij-org/zellij/releases/latest/download/zellij-x86_64-unknown-linux-musl.tar.gz | tar xz
 sudo install zellij /usr/local/bin
 
-# yazi (cargo, 国内镜像)
-CARGO_REGISTRIES_CRATES_IO_INDEX="sparse+https://rsproxy.cn/index/" cargo install --locked yazi-fm yazi-cli
+# yazi (推荐 snap, 或官方 release, 或 cargo)
+sudo snap install yazi --classic
+# 或:
+curl -sL https://github.com/sxyazi/yazi/releases/latest/download/yazi-x86_64-unknown-linux-gnu.zip -o yazi.zip && unzip yazi.zip
+# cargo 安装需先装 yazi-build: cargo install --locked yazi-build && yazi-build install
 
 # 首次启动后
 nvim +PlugInstall   # 安装 vim 插件
 ```
+
+> WSL 下 snap 版 yazi 依赖 `XDG_RUNTIME_DIR` 可写目录，否则报
+> `cannot create XDG_RUNTIME_DIR folder "/run/user/<uid>/": permission denied`。
+> 在 `.bashrc` 里设置即可（本仓库配套的 bashrc 片段写法）：
+> ```bash
+> export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp/run/user/$(id -u)}"
+> mkdir -p "$XDG_RUNTIME_DIR"
+> ```
 
 ## 使用备忘
 
