@@ -39,7 +39,7 @@ install_yazi() {
   command -v yazi >/dev/null 2>&1 && { say "yazi 已存在: $(yazi --version)"; return; }
 
   say "安装 yazi: 优先 snap, 其次 GitHub release, 最后 cargo(yazi-build)..."
-  if command -v snap >/dev/null 2>&1 && [ -n "$WSL_DISTRO_NAME" ]; then
+  if command -v snap >/dev/null 2>&1 && [ -n "${WSL_DISTRO_NAME:-}" ]; then
     warn "WSL 下 snap 版 yazi 需 XDG_RUNTIME_DIR 可写 (bashrc 已处理)"
     sudo snap install yazi --classic && return
   fi
