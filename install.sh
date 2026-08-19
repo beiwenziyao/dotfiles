@@ -47,11 +47,11 @@ install_yazi() {
   local ver url tmp
   ver="$(curl -s https://api.github.com/repos/sxyazi/yazi/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)"
   if [ -n "$ver" ]; then
-    url="${GITHUB_MIRROR}https://github.com/sxyazi/yazi/releases/download/${ver}/yazi-${RUST_ARCH}-unknown-linux-gnu.zip"
+    url="${GITHUB_MIRROR}https://github.com/sxyazi/yazi/releases/download/${ver}/yazi-${RUST_ARCH}-unknown-linux-musl.zip"
     tmp="$(mktemp -d)"
     if curl -sL "$url" -o "$tmp/yazi.zip"; then
       unzip -q -o "$tmp/yazi.zip" -d "$tmp"
-      install -m 755 "$tmp/yazi-${RUST_ARCH}-unknown-linux-gnu/yazi" "$HOME/.local/bin/yazi"
+      install -m 755 "$tmp/yazi-${RUST_ARCH}-unknown-linux-musl/yazi" "$HOME/.local/bin/yazi"
       rm -rf "$tmp"
       say "yazi 已装到 ~/.local/bin"
       return
