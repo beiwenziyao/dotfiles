@@ -64,6 +64,36 @@ install_yazi() {
   ~/.cargo/bin/yazi-build install
 }
 
+install_starship() {
+  command -v starship >/dev/null 2>&1 && { say "starship 已存在: $(starship --version)"; return; }
+  say "安装 starship..."
+  local ver url tmp
+  ver="$(curl -s https://api.github.com/repos/starship/starship/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)"
+  [ -n "$ver" ] || ver="v1.25.1"
+  url="${GITHUB_MIRROR}https://github.com/starship/starship/releases/download/${ver}/starship-${RUST_ARCH}-unknown-linux-musl.tar.gz"
+  tmp="$(mktemp -d)"
+  curl -sL "$url" | tar xz -C "$tmp"
+  install -m 755 "$tmp/starship" "$HOME/.local/bin/starship"
+  rm -rf "$tmp"
+  say "starship ${ver} 已装到 ~/.local/bin"
+}
+
+setup_bashrc() {
+  if ! grep -q "starship init" "$HOME/.bashrc" 2>/dev/null; then
+    cat >> "$HOME/.bashrc" <<'EOF'
+
+# >>> dotfiles: PATH + starship >>>
+export PATH="$HOME/.local/bin:$PATH"
+eval "$(starship init bash)"
+alias zj='zellij'
+# <<< dotfiles <<<
+EOF
+    say "已向 ~/.bashrc 追加 PATH + starship + zj 别名"
+  else
+    say "~/.bashrc 已有 dotfiles 配置，跳过"
+  fi
+}
+
 install_nvim() {
   command -v nvim >/dev/null 2>&1 && { say "nvim 已存在: $(nvim --version | head -1)"; return; }
   say "安装 neovim (apt)..."
@@ -99,9 +129,12 @@ main() {
   mkdir -p "$HOME/.local/bin"
   install_zellij
   install_yazi
+  install_starship
   install_nvim
   install_vim_plug
+  setup_bashrc
 
+  link "$DOTFILES/starship.toml"            "$HOME/.config/starship.toml"
   link "$DOTFILES/zellij/config.kdl"        "$HOME/.config/zellij/config.kdl"
   link "$DOTFILES/zellij/layouts/codex.kdl" "$HOME/.config/zellij/layouts/codex.kdl"
   link "$DOTFILES/nvim/init.vim"            "$HOME/.config/nvim/init.vim"

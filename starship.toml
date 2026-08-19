@@ -1,0 +1,110 @@
+"$schema" = "https://starship.rs/config-schema.json"
+
+format = """
+[](fg:pink)\
+$username\
+[](fg:pink bg:peach)\
+$directory\
+[](fg:peach bg:green)\
+$git_branch\
+$git_status\
+[](fg:green bg:sky)\
+$conda\
+$nodejs\
+$python\
+[](fg:sky bg:lavender)\
+$time\
+[](fg:lavender)\
+$line_break$character"""
+
+right_format = "$cmd_duration$status"
+add_newline = true
+palette = "codex"
+command_timeout = 800
+scan_timeout = 200
+
+[palettes.codex]
+pink = "#f5a3c7"
+peach = "#f0b785"
+green = "#9ece6a"
+sky = "#7dcfff"
+lavender = "#b4befe"
+text = "#1f2335"
+muted = "#7f849c"
+red = "#f38ba8"
+yellow = "#f9e2af"
+
+[username]
+show_always = true
+format = "[ $user ]($style)"
+style_user = "bold fg:text bg:pink"
+style_root = "bold fg:text bg:red"
+
+[directory]
+format = "[ $path ]($style)"
+style = "bold fg:text bg:peach"
+truncation_length = 3
+truncate_to_repo = false
+read_only = " 󰌾"
+read_only_style = "fg:red bg:peach"
+
+[git_branch]
+format = "[ $symbol$branch ]($style)"
+symbol = " "
+style = "bold fg:text bg:green"
+
+[git_status]
+format = "[$all_status$ahead_behind ]($style)"
+style = "bold fg:text bg:green"
+conflicted = "=${count} "
+ahead = "⇡${count} "
+behind = "⇣${count} "
+diverged = "⇕${ahead_count}/${behind_count} "
+untracked = "?${count} "
+stashed = "$${count} "
+modified = "!${count} "
+staged = "+${count} "
+renamed = "»${count} "
+deleted = "✘${count} "
+
+[conda]
+format = "[ $symbol$environment ]($style)"
+symbol = "○ "
+style = "bold fg:text bg:sky"
+ignore_base = false
+
+[nodejs]
+format = "[ $symbol$version ]($style)"
+symbol = "⬢ "
+style = "bold fg:text bg:sky"
+
+[python]
+format = "[ ${symbol}${pyenv_prefix}(${version} )(\\($virtualenv\\) )]($style)"
+symbol = " "
+style = "bold fg:text bg:sky"
+
+[time]
+disabled = false
+format = "[ 󰥔 $time ]($style)"
+time_format = "%H:%M"
+style = "bold fg:text bg:lavender"
+
+[cmd_duration]
+min_time = 1000
+format = "[󱎫 $duration]($style) "
+style = "bold fg:yellow"
+
+[status]
+disabled = false
+format = "[$symbol$status]($style) "
+symbol = "✘ "
+success_symbol = ""
+style = "bold fg:red"
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vimcmd_symbol = "[❮](bold green)"
+
+[line_break]
+disabled = false
