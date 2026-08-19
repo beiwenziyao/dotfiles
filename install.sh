@@ -7,6 +7,11 @@ set -euo pipefail
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DRY_RUN="${1:-}"
 
+LINK_ONLY=0
+case "${1:-}" in
+  --link-only) LINK_ONLY=1 ;;
+esac
+
 say()  { printf '\033[1;32m[+] %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; }
 
@@ -127,12 +132,16 @@ link() {
 
 main() {
   mkdir -p "$HOME/.local/bin"
-  install_zellij
-  install_yazi
-  install_starship
-  install_nvim
-  install_vim_plug
-  setup_bashrc
+  if [ "$LINK_ONLY" -ne 1 ]; then
+    install_zellij
+    install_yazi
+    install_starship
+    install_nvim
+    install_vim_plug
+    setup_bashrc
+  else
+    say "--link-only: 跳过安装, 仅同步配置"
+  fi
 
   link "$DOTFILES/starship.toml"            "$HOME/.config/starship.toml"
   link "$DOTFILES/zellij/config.kdl"        "$HOME/.config/zellij/config.kdl"
