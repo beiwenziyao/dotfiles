@@ -13,6 +13,8 @@ Plug 'preservim/nerdcommenter'
 Plug 'rrethy/vim-illuminate'
 " IndentLine
 Plug 'Yggdroot/indentLine'
+" Auto pairs: 括号/引号自动成对, 退格一次删除一对
+Plug 'jiangmiao/auto-pairs'
 call plug#end()			" End Vim-Plug plugin manager configuration
 
 
@@ -39,13 +41,8 @@ hi illuminatedWord ctermfg=white ctermbg=99
 " Set the mapleader to a space character.
 let mapleader = ' '
 
-" Set Automatically Complete Parentheses
-inoremap ' ''<ESC>i
-inoremap " ""<ESC>i
-inoremap ( ()<ESC>i
-inoremap [ []<ESC>i
-inoremap < <><ESC>i
-inoremap { {<CR>}<ESC>O
+" Auto-pairs 配对表 (不含 <> , 避免 <= >= 等误配对)
+let g:AutoPairs = {'(':')', '[':']', '{':'}', '"':'"', "'":"'"}
 
 " Configure the NERDTree plugin mapping button
 " Automatically open NERDTree after opening the file
