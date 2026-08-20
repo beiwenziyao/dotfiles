@@ -26,22 +26,26 @@ case "$ARCH" in
 esac
 
 install_zellij() {
-  command -v zellij >/dev/null 2>&1 && { say "zellij 已存在: $(zellij --version)"; return; }
+  if [ -x "$HOME/.local/bin/zellij" ]; then say "zellij 已存在: $("$HOME/.local/bin/zellij" --version)"; return; fi
   say "安装 zellij..."
-  local ver
+  local ver url tmp
   ver="$(curl -s https://api.github.com/repos/zellij-org/zellij/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)"
   [ -n "$ver" ] || ver="v0.44.3"
-  local url="${GITHUB_MIRROR}https://github.com/zellij-org/zellij/releases/download/${ver}/zellij-${RUST_ARCH}-unknown-linux-musl.tar.gz"
-  local tmp
+  url="${GITHUB_MIRROR}https://github.com/zellij-org/zellij/releases/download/${ver}/zellij-${RUST_ARCH}-unknown-linux-musl.tar.gz"
   tmp="$(mktemp -d)"
-  curl -sL "$url" | tar xz -C "$tmp"
+  if ! curl -sL --retry 5 --retry-all-errors --connect-timeout 10 --max-time 300 "$url" | tar xz -C "$tmp"; then
+    rm -rf "$tmp"; say "直接下载失败, 尝试镜像 ghfast.top..."
+    tmp="$(mktemp -d)"
+    curl -sL --retry 5 --retry-all-errors --connect-timeout 10 --max-time 300 "https://ghfast.top/$url" | tar xz -C "$tmp"
+  fi
   install -m 755 "$tmp/zellij" "$HOME/.local/bin/zellij"
   rm -rf "$tmp"
   say "zellij ${ver} 已装到 ~/.local/bin"
 }
 
 install_yazi() {
-  command -v yazi >/dev/null 2>&1 && { say "yazi 已存在: $(yazi --version)"; return; }
+  if [ -x "$HOME/.local/bin/yazi" ]; then say "yazi 已存在: $("$HOME/.local/bin/yazi" --version)"; return; fi
+  command -v yazi >/dev/null 2>&1 && { say "yazi 已在 PATH: $(yazi --version)"; return; }
 
   say "安装 yazi: 优先 snap, 其次 GitHub release, 最后 cargo(yazi-build)..."
   if command -v snap >/dev/null 2>&1 && [ -n "${WSL_DISTRO_NAME:-}" ]; then
@@ -70,14 +74,18 @@ install_yazi() {
 }
 
 install_starship() {
-  command -v starship >/dev/null 2>&1 && { say "starship 已存在: $(starship --version)"; return; }
+  if [ -x "$HOME/.local/bin/starship" ]; then say "starship 已存在: $("$HOME/.local/bin/starship" --version)"; return; fi
   say "安装 starship..."
   local ver url tmp
   ver="$(curl -s https://api.github.com/repos/starship/starship/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)"
   [ -n "$ver" ] || ver="v1.25.1"
   url="${GITHUB_MIRROR}https://github.com/starship/starship/releases/download/${ver}/starship-${RUST_ARCH}-unknown-linux-musl.tar.gz"
   tmp="$(mktemp -d)"
-  curl -sL "$url" | tar xz -C "$tmp"
+  if ! curl -sL --retry 5 --retry-all-errors --connect-timeout 10 --max-time 300 "$url" | tar xz -C "$tmp"; then
+    rm -rf "$tmp"; say "直接下载失败, 尝试镜像 ghfast.top..."
+    tmp="$(mktemp -d)"
+    curl -sL --retry 5 --retry-all-errors --connect-timeout 10 --max-time 300 "https://ghfast.top/$url" | tar xz -C "$tmp"
+  fi
   install -m 755 "$tmp/starship" "$HOME/.local/bin/starship"
   rm -rf "$tmp"
   say "starship ${ver} 已装到 ~/.local/bin"
@@ -132,6 +140,7 @@ link() {
 
 main() {
   mkdir -p "$HOME/.local/bin"
+  export PATH="$HOME/.local/bin:$PATH"   # 让本会话及后续重跑都能识别已装二进制
   if [ "$LINK_ONLY" -ne 1 ]; then
     install_zellij
     install_yazi
