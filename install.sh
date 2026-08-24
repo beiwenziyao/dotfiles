@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # dotfiles 一键安装脚本
-# 安装 zellij / nvim / yazi 并链接配置到 $HOME
-# 用法: ./install.sh [--dry-run]
+# 安装 zellij / nvim / yazi / starship 并链接配置到 $HOME
+# 用法: ./install.sh [--link-only]
 set -euo pipefail
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DRY_RUN="${1:-}"
 
 LINK_ONLY=0
 case "${1:-}" in
@@ -15,8 +14,54 @@ esac
 say()  { printf '\033[1;32m[+] %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; }
 
-# 国内网络可用 GitHub 镜像前缀, 如: GITHUB_MIRROR=https://mirror.ghproxy.com/
-GITHUB_MIRROR="${GITHUB_MIRROR:-}"
+# ---------------------------------------------------------------------------
+# 下载: 国内镜像优先, 逐个尝试, 直连 GitHub 兜底 (自动"测速择优")
+# 可用镜像: ghfast.top, gh-proxy.com; 自定义前缀用环境变量 GITHUB_MIRROR=
+# ---------------------------------------------------------------------------
+MIRRORS=(
+  "https://ghfast.top/https://github.com/"
+  "https://gh-proxy.com/https://github.com/"
+)
+RAW_MIRRORS=(
+  "https://ghfast.top/https://raw.githubusercontent.com/"
+  "https://gh-proxy.com/https://raw.githubusercontent.com/"
+)
+if [ -n "${GITHUB_MIRROR:-}" ]; then
+  MIRRORS=("$GITHUB_MIRROR" "${MIRRORS[@]}")
+  RAW_MIRRORS=("${GITHUB_MIRROR}https://raw.githubusercontent.com/" "${RAW_MIRRORS[@]}")
+fi
+
+# github_fetch <仓库路径> <输出文件>   例: github_fetch "zellij-org/zellij/releases/download/v0.44.3/zellij-x86_64-unknown-linux-musl.tar.gz" /tmp/z
+github_fetch() {
+  local path="$1" out="$2" base
+  for base in "${MIRRORS[@]}"; do
+    if curl -fsSL --retry 2 --retry-all-errors --connect-timeout 8 --max-time 240 -o "$out" "${base}${path}" 2>/dev/null; then
+      [ -s "$out" ] && { say "  源: ${base}" ; return 0; }
+    fi
+  done
+  warn "所有镜像均失败"
+  return 1
+}
+
+# raw_fetch <raw路径> <输出文件>   例: raw_fetch "junegunn/vim-plug/master/plug.vim" /tmp/plug.vim
+raw_fetch() {
+  local path="$1" out="$2" base
+  for base in "${RAW_MIRRORS[@]}"; do
+    if curl -fsSL --retry 2 --retry-all-errors --connect-timeout 8 --max-time 120 -o "$out" "${base}${path}" 2>/dev/null; then
+      [ -s "$out" ] && { say "  源: ${base}"; return 0; }
+    fi
+  done
+  warn "所有镜像均失败"
+  return 1
+}
+
+# github_version <repo> <默认版本>
+github_version() {
+  local ver
+  ver="$(curl -fsS --connect-timeout 8 --max-time 20 "https://api.github.com/repos/$1/releases/latest" 2>/dev/null | grep -o '"tag_name": *"[^"]*"' | head -1 | cut -d'"' -f4)"
+  [ -n "$ver" ] || ver="$2"
+  printf '%s' "$ver"
+}
 
 ARCH="$(uname -m)"
 case "$ARCH" in
@@ -28,16 +73,12 @@ esac
 install_zellij() {
   if [ -x "$HOME/.local/bin/zellij" ]; then say "zellij 已存在: $("$HOME/.local/bin/zellij" --version)"; return; fi
   say "安装 zellij..."
-  local ver url tmp
-  ver="$(curl -s https://api.github.com/repos/zellij-org/zellij/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)"
-  [ -n "$ver" ] || ver="v0.44.3"
-  url="${GITHUB_MIRROR}https://github.com/zellij-org/zellij/releases/download/${ver}/zellij-${RUST_ARCH}-unknown-linux-musl.tar.gz"
+  local ver tmp tarball
+  ver="$(github_version zellij-org/zellij v0.44.3)"
   tmp="$(mktemp -d)"
-  if ! curl -sL --retry 5 --retry-all-errors --connect-timeout 10 --max-time 300 "$url" | tar xz -C "$tmp"; then
-    rm -rf "$tmp"; say "直接下载失败, 尝试镜像 ghfast.top..."
-    tmp="$(mktemp -d)"
-    curl -sL --retry 5 --retry-all-errors --connect-timeout 10 --max-time 300 "https://ghfast.top/$url" | tar xz -C "$tmp"
-  fi
+  tarball="$tmp/zellij.tar.gz"
+  github_fetch "zellij-org/zellij/releases/download/${ver}/zellij-${RUST_ARCH}-unknown-linux-musl.tar.gz" "$tarball"
+  tar xzf "$tarball" -C "$tmp"
   install -m 755 "$tmp/zellij" "$HOME/.local/bin/zellij"
   rm -rf "$tmp"
   say "zellij ${ver} 已装到 ~/.local/bin"
@@ -53,20 +94,18 @@ install_yazi() {
     sudo snap install yazi --classic && return
   fi
 
-  local ver url tmp
-  ver="$(curl -s https://api.github.com/repos/sxyazi/yazi/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)"
-  if [ -n "$ver" ]; then
-    url="${GITHUB_MIRROR}https://github.com/sxyazi/yazi/releases/download/${ver}/yazi-${RUST_ARCH}-unknown-linux-musl.zip"
-    tmp="$(mktemp -d)"
-    if curl -sL "$url" -o "$tmp/yazi.zip"; then
-      unzip -q -o "$tmp/yazi.zip" -d "$tmp"
-      install -m 755 "$tmp/yazi-${RUST_ARCH}-unknown-linux-musl/yazi" "$HOME/.local/bin/yazi"
-      rm -rf "$tmp"
-      say "yazi 已装到 ~/.local/bin"
-      return
-    fi
+  local ver tmp zip
+  ver="$(github_version sxyazi/yazi v26.8.15)"
+  tmp="$(mktemp -d)"
+  zip="$tmp/yazi.zip"
+  if github_fetch "sxyazi/yazi/releases/download/${ver}/yazi-${RUST_ARCH}-unknown-linux-musl.zip" "$zip"; then
+    unzip -q -o "$zip" -d "$tmp"
+    install -m 755 "$tmp/yazi-${RUST_ARCH}-unknown-linux-musl/yazi" "$HOME/.local/bin/yazi"
     rm -rf "$tmp"
+    say "yazi ${ver} 已装到 ~/.local/bin"
+    return
   fi
+  rm -rf "$tmp"
 
   CARGO_REGISTRIES_CRATES_IO_INDEX="sparse+https://rsproxy.cn/index/" \
     cargo install --locked yazi-build
@@ -76,19 +115,30 @@ install_yazi() {
 install_starship() {
   if [ -x "$HOME/.local/bin/starship" ]; then say "starship 已存在: $("$HOME/.local/bin/starship" --version)"; return; fi
   say "安装 starship..."
-  local ver url tmp
-  ver="$(curl -s https://api.github.com/repos/starship/starship/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)"
-  [ -n "$ver" ] || ver="v1.25.1"
-  url="${GITHUB_MIRROR}https://github.com/starship/starship/releases/download/${ver}/starship-${RUST_ARCH}-unknown-linux-musl.tar.gz"
+  local ver tmp tarball
+  ver="$(github_version starship/starship v1.25.1)"
   tmp="$(mktemp -d)"
-  if ! curl -sL --retry 5 --retry-all-errors --connect-timeout 10 --max-time 300 "$url" | tar xz -C "$tmp"; then
-    rm -rf "$tmp"; say "直接下载失败, 尝试镜像 ghfast.top..."
-    tmp="$(mktemp -d)"
-    curl -sL --retry 5 --retry-all-errors --connect-timeout 10 --max-time 300 "https://ghfast.top/$url" | tar xz -C "$tmp"
-  fi
+  tarball="$tmp/starship.tar.gz"
+  github_fetch "starship/starship/releases/download/${ver}/starship-${RUST_ARCH}-unknown-linux-musl.tar.gz" "$tarball"
+  tar xzf "$tarball" -C "$tmp"
   install -m 755 "$tmp/starship" "$HOME/.local/bin/starship"
   rm -rf "$tmp"
   say "starship ${ver} 已装到 ~/.local/bin"
+}
+
+install_nvim() {
+  command -v nvim >/dev/null 2>&1 && { say "nvim 已存在: $(nvim --version | head -1)"; return; }
+  say "安装 neovim (apt)..."
+  sudo apt-get update
+  sudo apt-get install -y neovim
+}
+
+install_vim_plug() {
+  if [ ! -f "$HOME/.vim/autoload/plug.vim" ]; then
+    say "安装 vim-plug..."
+    raw_fetch "junegunn/vim-plug/master/plug.vim" "$HOME/.vim/autoload/plug.vim"
+  fi
+  say "运行 :PlugInstall 安装 vim 插件 (进入 nvim 后执行 PlugInstall)"
 }
 
 setup_bashrc() {
@@ -105,22 +155,6 @@ EOF
   else
     say "~/.bashrc 已有 dotfiles 配置，跳过"
   fi
-}
-
-install_nvim() {
-  command -v nvim >/dev/null 2>&1 && { say "nvim 已存在: $(nvim --version | head -1)"; return; }
-  say "安装 neovim (apt)..."
-  sudo apt-get update
-  sudo apt-get install -y neovim
-}
-
-install_vim_plug() {
-  if [ ! -f "$HOME/.vim/autoload/plug.vim" ]; then
-    say "安装 vim-plug..."
-    curl -fLo "$HOME/.vim/autoload/plug.vim" --create-dirs \
-      "${GITHUB_MIRROR}https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
-  fi
-  say "运行 :PlugInstall 安装 vim 插件 (进入 nvim 后执行 PlugInstall)"
 }
 
 link() {
