@@ -136,7 +136,11 @@ install_nvim() {
 install_vim_plug() {
   if [ ! -f "$HOME/.vim/autoload/plug.vim" ]; then
     say "安装 vim-plug..."
-    raw_fetch "junegunn/vim-plug/master/plug.vim" "$HOME/.vim/autoload/plug.vim"
+    if raw_fetch "junegunn/vim-plug/master/plug.vim" "$HOME/.vim/autoload/plug.vim"; then
+      say "vim-plug 已安装"
+    else
+      warn "vim-plug 下载失败(网络), 继续执行; 稍后可: curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://ghfast.top/https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+    fi
   fi
   say "运行 :PlugInstall 安装 vim 插件 (进入 nvim 后执行 PlugInstall)"
 }
