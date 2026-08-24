@@ -34,24 +34,24 @@ fi
 # github_fetch <仓库路径> <输出文件>   例: github_fetch "zellij-org/zellij/releases/download/v0.44.3/zellij-x86_64-unknown-linux-musl.tar.gz" /tmp/z
 github_fetch() {
   local path="$1" out="$2" base
-  for base in "${MIRRORS[@]}"; do
+  for base in "${MIRRORS[@]}" "https://github.com/"; do
     if curl -fsSL --retry 2 --retry-all-errors --connect-timeout 8 --max-time 240 -o "$out" "${base}${path}" 2>/dev/null; then
       [ -s "$out" ] && { say "  源: ${base}" ; return 0; }
     fi
   done
-  warn "所有镜像均失败"
+  warn "所有镜像及直连均失败"
   return 1
 }
 
 # raw_fetch <raw路径> <输出文件>   例: raw_fetch "junegunn/vim-plug/master/plug.vim" /tmp/plug.vim
 raw_fetch() {
   local path="$1" out="$2" base
-  for base in "${RAW_MIRRORS[@]}"; do
+  for base in "${RAW_MIRRORS[@]}" "https://raw.githubusercontent.com/"; do
     if curl -fsSL --retry 2 --retry-all-errors --connect-timeout 8 --max-time 120 -o "$out" "${base}${path}" 2>/dev/null; then
       [ -s "$out" ] && { say "  源: ${base}"; return 0; }
     fi
   done
-  warn "所有镜像均失败"
+  warn "所有镜像及直连均失败"
   return 1
 }
 
