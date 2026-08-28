@@ -1,6 +1,6 @@
 # dotfiles
 
-个人终端偏好库：zellij + nvim + yazi 三件套配置。
+个人终端偏好库：zellij + nvim + yazi 三件套配置。安装过程只修改当前用户的 `$HOME`，不需要管理员权限，也不调用系统包管理器。
 
 ## 包含内容
 
@@ -22,9 +22,11 @@ cd ~/dotfiles && ./install.sh
 1. 安装 zellij（GitHub release 二进制到 `~/.local/bin`）
 2. 安装 yazi（GitHub musl 静态版，老 glibc 系统也兼容）
 3. 安装 starship 并写入 `~/.bashrc`（PATH + `eval "$(starship init bash)"` + `zj` 别名）
-4. 安装 neovim（apt）
+4. 安装 neovim（程序目录放在 `~/.local/opt`，命令链接到 `~/.local/bin`；CentOS 7 等旧 glibc 系统使用已验证的 v0.11.5 兼容构建）
 5. 安装 vim-plug
 6. 将配置软链接到 `$HOME`（已有文件自动备份为 `.bak.*`）
+
+脚本不会写入 `/usr`、`/opt` 等系统目录。需要系统预先提供 Bash、curl、tar、unzip 等基础工具；缺少这些工具时脚本会报错退出，而不会尝试修改系统环境。
 
 国内网络拉不到 GitHub 时：
 
@@ -32,30 +34,13 @@ cd ~/dotfiles && ./install.sh
 GITHUB_MIRROR=https://mirror.ghproxy.com/ ./install.sh
 ```
 
-## 手动安装依赖
+只同步配置、不安装程序：
 
 ```bash
-# zellij (官方 release)
-curl -sL https://github.com/zellij-org/zellij/releases/latest/download/zellij-x86_64-unknown-linux-musl.tar.gz | tar xz
-sudo install zellij /usr/local/bin
-
-# yazi (推荐 snap, 或官方 release, 或 cargo)
-sudo snap install yazi --classic
-# 或:
-curl -sL https://github.com/sxyazi/yazi/releases/latest/download/yazi-x86_64-unknown-linux-gnu.zip -o yazi.zip && unzip yazi.zip
-# cargo 安装需先装 yazi-build: cargo install --locked yazi-build && yazi-build install
-
-# 首次启动后
-nvim +PlugInstall   # 安装 vim 插件
+./install.sh --link-only
 ```
 
-> WSL 下 snap 版 yazi 依赖 `XDG_RUNTIME_DIR` 可写目录，否则报
-> `cannot create XDG_RUNTIME_DIR folder "/run/user/<uid>/": permission denied`。
-> 在 `.bashrc` 里设置即可（本仓库配套的 bashrc 片段写法）：
-> ```bash
-> export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp/run/user/$(id -u)}"
-> mkdir -p "$XDG_RUNTIME_DIR"
-> ```
+安装完成后首次启动 nvim，执行 `:PlugInstall` 安装插件。
 
 ## 使用备忘
 
