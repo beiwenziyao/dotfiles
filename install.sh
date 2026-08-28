@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 # dotfiles 一键安装脚本
-# 在当前用户目录安装 zellij / nvim / yazi / starship 并链接配置到 $HOME
+# 在共享 NFS runtime 安装 zellij / nvim / yazi / starship 并链接配置到 $HOME
 # 用法: ./install.sh [--link-only]
 set -euo pipefail
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -n "${DOTFILES_RUNTIME_ROOT:-}" ]; then
+  RUNTIME_ROOT="$DOTFILES_RUNTIME_ROOT"
+elif [ -d /nfs_global/S/wenzhiyang ] && [ -w /nfs_global/S/wenzhiyang ]; then
+  RUNTIME_ROOT=/nfs_global/S/wenzhiyang/runtime/common
+else
+  RUNTIME_ROOT="$HOME/.local"
+fi
+BIN_DIR="$RUNTIME_ROOT/bin"
+OPT_DIR="$RUNTIME_ROOT/opt"
+VIM_RUNTIME="$RUNTIME_ROOT/vim"
 
 LINK_ONLY=0
 case "${1:-}" in
@@ -80,7 +91,7 @@ case "$ARCH" in
 esac
 
 install_zellij() {
-  if [ -x "$HOME/.local/bin/zellij" ]; then say "zellij 已存在: $("$HOME/.local/bin/zellij" --version)"; return; fi
+  if [ -x "$BIN_DIR/zellij" ]; then say "zellij 已存在: $("$BIN_DIR/zellij" --version)"; return; fi
   say "安装 zellij..."
   local ver tmp tarball
   ver="$(github_version zellij-org/zellij v0.44.3)"
@@ -88,36 +99,37 @@ install_zellij() {
   tarball="$tmp/zellij.tar.gz"
   github_fetch "zellij-org/zellij/releases/download/${ver}/zellij-${RUST_ARCH}-unknown-linux-musl.tar.gz" "$tarball"
   tar xzf "$tarball" -C "$tmp"
-  install -m 755 "$tmp/zellij" "$HOME/.local/bin/zellij"
+  install -m 755 "$tmp/zellij" "$BIN_DIR/zellij"
   rm -rf "$tmp"
-  say "zellij ${ver} 已装到 ~/.local/bin"
+  say "zellij ${ver} 已装到 $BIN_DIR"
 }
 
 install_yazi() {
-  if [ -x "$HOME/.local/bin/yazi" ]; then say "yazi 已存在: $("$HOME/.local/bin/yazi" --version)"; return; fi
-  command -v yazi >/dev/null 2>&1 && { say "yazi 已在 PATH: $(yazi --version)"; return; }
+  if [ -x "$BIN_DIR/yazi" ] && [ -x "$BIN_DIR/ya" ]; then
+    say "yazi/ya 已存在: $("$BIN_DIR/yazi" --version | head -1)"
+    return
+  fi
 
-  say "安装 yazi: 优先 GitHub release, 失败时使用 cargo(yazi-build)..."
+  say "安装 yazi/ya..."
   local ver tmp zip
   ver="$(github_version sxyazi/yazi v26.8.15)"
   tmp="$(mktemp -d)"
   zip="$tmp/yazi.zip"
   if github_fetch "sxyazi/yazi/releases/download/${ver}/yazi-${RUST_ARCH}-unknown-linux-musl.zip" "$zip"; then
     unzip -q -o "$zip" -d "$tmp"
-    install -m 755 "$tmp/yazi-${RUST_ARCH}-unknown-linux-musl/yazi" "$HOME/.local/bin/yazi"
+    install -m 755 "$tmp/yazi-${RUST_ARCH}-unknown-linux-musl/yazi" "$BIN_DIR/yazi"
+    install -m 755 "$tmp/yazi-${RUST_ARCH}-unknown-linux-musl/ya" "$BIN_DIR/ya"
     rm -rf "$tmp"
-    say "yazi ${ver} 已装到 ~/.local/bin"
+    say "yazi/ya ${ver} 已装到 $BIN_DIR"
     return
   fi
   rm -rf "$tmp"
-
-  CARGO_REGISTRIES_CRATES_IO_INDEX="sparse+https://rsproxy.cn/index/" \
-    cargo install --locked yazi-build
-  ~/.cargo/bin/yazi-build install
+  warn "yazi/ya 下载失败"
+  return 1
 }
 
 install_starship() {
-  if [ -x "$HOME/.local/bin/starship" ]; then say "starship 已存在: $("$HOME/.local/bin/starship" --version)"; return; fi
+  if [ -x "$BIN_DIR/starship" ]; then say "starship 已存在: $("$BIN_DIR/starship" --version)"; return; fi
   say "安装 starship..."
   local ver tmp tarball
   ver="$(github_version starship/starship v1.25.1)"
@@ -125,19 +137,21 @@ install_starship() {
   tarball="$tmp/starship.tar.gz"
   github_fetch "starship/starship/releases/download/${ver}/starship-${RUST_ARCH}-unknown-linux-musl.tar.gz" "$tarball"
   tar xzf "$tarball" -C "$tmp"
-  install -m 755 "$tmp/starship" "$HOME/.local/bin/starship"
+  install -m 755 "$tmp/starship" "$BIN_DIR/starship"
   rm -rf "$tmp"
-  say "starship ${ver} 已装到 ~/.local/bin"
+  say "starship ${ver} 已装到 $BIN_DIR"
 }
 
 install_nvim() {
-  if [ -x "$HOME/.local/bin/nvim" ]; then say "nvim 已存在: $("$HOME/.local/bin/nvim" --version | head -1)"; return; fi
-  command -v nvim >/dev/null 2>&1 && { say "nvim 已存在: $(nvim --version | head -1)"; return; }
+  if [ -x "$BIN_DIR/nvim" ]; then say "nvim 已存在: $("$BIN_DIR/nvim" --version | head -1)"; return; fi
   [ -n "$NVIM_ARCH" ] || { warn "暂不支持为 $ARCH 自动安装 Neovim"; return 1; }
 
   local repo="neovim/neovim" glibc_version="" glibc_major="" glibc_minor=""
   local ver tmp tarball extracted install_dir actual_ver
-  if command -v getconf >/dev/null 2>&1; then
+  if [ "$RUNTIME_ROOT" = /nfs_global/S/wenzhiyang/runtime/common ]; then
+    repo="neovim/neovim-releases"
+    say "共享 runtime 使用 Neovim v0.11.5 旧 glibc 兼容构建"
+  elif command -v getconf >/dev/null 2>&1; then
     glibc_version="$(getconf GNU_LIBC_VERSION 2>/dev/null | awk '{print $2}')"
     IFS=. read -r glibc_major glibc_minor _ <<< "$glibc_version"
     if [[ "$glibc_major" =~ ^[0-9]+$ && "$glibc_minor" =~ ^[0-9]+$ ]] &&
@@ -147,7 +161,7 @@ install_nvim() {
     fi
   fi
 
-  say "安装 neovim 到 ~/.local/opt..."
+  say "安装 neovim 到 $OPT_DIR..."
   if [ "$repo" = "neovim/neovim-releases" ]; then
     # 兼容构建仓库的最新标签偶尔会包含开发版；固定到已验证的稳定版本。
     ver="${NVIM_VERSION:-v0.11.5}"
@@ -167,27 +181,30 @@ install_nvim() {
     return 1
   fi
 
-  install_dir="$HOME/.local/opt/nvim-${ver}-${NVIM_ARCH}"
-  mkdir -p "$HOME/.local/opt"
+  install_dir="$OPT_DIR/nvim-${ver}-${NVIM_ARCH}"
+  mkdir -p "$OPT_DIR"
   if [ -e "$install_dir" ]; then
     [ -x "$install_dir/bin/nvim" ] || { warn "安装目录已存在但不完整: $install_dir"; return 1; }
   else
     mv "$extracted" "$install_dir"
   fi
-  ln -sfn "$install_dir/bin/nvim" "$HOME/.local/bin/nvim"
+  ln -sfn "../opt/nvim-${ver}-${NVIM_ARCH}/bin/nvim" "$BIN_DIR/nvim"
   rm -rf "$tmp"
   say "neovim ${actual_ver} 已装到 $install_dir"
 }
 
 install_vim_plug() {
-  if [ ! -f "$HOME/.vim/autoload/plug.vim" ]; then
+  if [ ! -f "$VIM_RUNTIME/autoload/plug.vim" ]; then
     say "安装 vim-plug..."
-    mkdir -p "$HOME/.vim/autoload"
-    if raw_fetch "junegunn/vim-plug/master/plug.vim" "$HOME/.vim/autoload/plug.vim"; then
+    mkdir -p "$VIM_RUNTIME/autoload"
+    if raw_fetch "junegunn/vim-plug/master/plug.vim" "$VIM_RUNTIME/autoload/plug.vim"; then
       say "vim-plug 已安装"
     else
-      warn "vim-plug 下载失败(网络), 继续执行; 稍后可: curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://ghfast.top/https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+      warn "vim-plug 下载失败(网络), 继续执行"
     fi
+  fi
+  if [ -f "$VIM_RUNTIME/autoload/plug.vim" ]; then
+    link "$VIM_RUNTIME/autoload/plug.vim" "$HOME/.vim/autoload/plug.vim"
   fi
   say "运行 :PlugInstall 安装 vim 插件 (进入 nvim 后执行 PlugInstall)"
 }
@@ -212,7 +229,7 @@ EOF
 link() {
   local src="$1" dst="$2"
   if [ -e "$dst" ] || [ -L "$dst" ]; then
-    if [ "$(readlink -f "$dst")" = "$src" ]; then
+    if [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
       say "已链接: $dst"
       return
     fi
@@ -225,8 +242,8 @@ link() {
 }
 
 main() {
-  mkdir -p "$HOME/.local/bin"
-  export PATH="$HOME/.local/bin:$PATH"   # 让本会话及后续重跑都能识别已装二进制
+  mkdir -p "$BIN_DIR" "$OPT_DIR" "$VIM_RUNTIME"
+  export PATH="$BIN_DIR:$PATH"
   if [ "$LINK_ONLY" -ne 1 ]; then
     install_zellij
     install_yazi
@@ -237,6 +254,11 @@ main() {
   else
     say "--link-only: 跳过安装, 仅同步配置"
   fi
+
+  local cmd
+  for cmd in starship yazi ya zellij nvim; do
+    [ -x "$BIN_DIR/$cmd" ] && link "$BIN_DIR/$cmd" "$HOME/.local/bin/$cmd"
+  done
 
   link "$DOTFILES/starship.toml"            "$HOME/.config/starship.toml"
   link "$DOTFILES/zellij/config.kdl"        "$HOME/.config/zellij/config.kdl"

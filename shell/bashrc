@@ -13,16 +13,33 @@ IPRC_SHARED_BASHRC_LOADED=1
 
 export IPRC_SHARED_ROOT="${IPRC_SHARED_ROOT:-/nfs_global/S/wenzhiyang}"
 export IPRC_CONDA_ROOT="${IPRC_CONDA_ROOT:-$IPRC_SHARED_ROOT/runtime/conda-common}"
+export IPRC_COMMON_RUNTIME="${IPRC_COMMON_RUNTIME:-$IPRC_SHARED_ROOT/runtime/common}"
 
-case ":$PATH:" in
-  *":$HOME/.local/bin:"*) ;;
-  *) PATH="$HOME/.local/bin:$PATH" ;;
-esac
-case ":$PATH:" in
-  *":$HOME/bin:"*) ;;
-  *) PATH="$HOME/bin:$PATH" ;;
-esac
+__iprc_path_prepend() {
+  [ -d "$1" ] || return
+  case ":$PATH:" in
+    *":$1:"*) ;;
+    *) PATH="$1:$PATH" ;;
+  esac
+}
+
+__iprc_arch="$(uname -m 2>/dev/null || printf unknown)"
+__iprc_platform=""
+if [ -r /etc/os-release ]; then
+  __iprc_platform="$(
+    . /etc/os-release
+    printf '%s%s-%s' "$ID" "${VERSION_ID%%.*}" "$__iprc_arch"
+  )"
+fi
+
+__iprc_path_prepend "$HOME/bin"
+__iprc_path_prepend "$HOME/.local/bin"
+__iprc_path_prepend "$IPRC_COMMON_RUNTIME/bin"
+[ -n "$__iprc_platform" ] &&
+  __iprc_path_prepend "$IPRC_SHARED_ROOT/runtime/platform/$__iprc_platform/bin"
 export PATH
+unset -f __iprc_path_prepend
+unset __iprc_arch __iprc_platform
 
 if [ -x "$IPRC_CONDA_ROOT/bin/conda" ]; then
   __iprc_conda_setup="$("$IPRC_CONDA_ROOT/bin/conda" shell.bash hook 2>/dev/null)"

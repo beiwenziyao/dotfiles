@@ -1,7 +1,12 @@
 let g:plug_threads = 1
 " 国内网络: 插件克隆走 gitclone 镜像 (github 直连不通时)
 let g:plug_url_format = 'https://gitclone.com/github.com/%s.git'
-call plug#begin()		" Begin Vim-Plug plugin manager configuration
+if exists('$IPRC_COMMON_RUNTIME') && isdirectory($IPRC_COMMON_RUNTIME)
+  let s:plug_home = $IPRC_COMMON_RUNTIME . '/vim/plugged'
+else
+  let s:plug_home = expand('~/.vim/plugged')
+endif
+call plug#begin(s:plug_home)	" Begin Vim-Plug plugin manager configuration
 "nerdtree"
 Plug 'preservim/nerdtree'
 "tagbar"
