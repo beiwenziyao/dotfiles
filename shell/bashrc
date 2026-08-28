@@ -61,7 +61,8 @@ fi
 
 # Rocky's /etc/profile.d/which2.sh prints the Conda shell function body.
 # Keep Conda activation support while making `which conda` report its executable.
-which() {
+unalias which 2>/dev/null || true
+function which {
   if [ "$#" -eq 1 ] && [ "$1" = conda ] && [ -n "${CONDA_EXE:-}" ]; then
     printf '%s\n' "$CONDA_EXE"
     return 0
