@@ -9,7 +9,7 @@ esac
 if [ -n "${IPRC_SHARED_BASHRC_LOADED:-}" ]; then
   return
 fi
-export IPRC_SHARED_BASHRC_LOADED=1
+IPRC_SHARED_BASHRC_LOADED=1
 
 export IPRC_SHARED_ROOT="${IPRC_SHARED_ROOT:-/nfs_global/S/wenzhiyang}"
 export IPRC_CONDA_ROOT="${IPRC_CONDA_ROOT:-$IPRC_SHARED_ROOT/runtime/conda-common}"
