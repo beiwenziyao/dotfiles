@@ -59,6 +59,16 @@ if [ -x "$IPRC_CONDA_ROOT/bin/conda" ]; then
   fi
 fi
 
+# Rocky's /etc/profile.d/which2.sh prints the Conda shell function body.
+# Keep Conda activation support while making `which conda` report its executable.
+which() {
+  if [ "$#" -eq 1 ] && [ "$1" = conda ] && [ -n "${CONDA_EXE:-}" ]; then
+    printf '%s\n' "$CONDA_EXE"
+    return 0
+  fi
+  /usr/bin/which "$@"
+}
+
 alias sq='squeue -o "%.10i %.15P %.15j %.15u %.2t %.10M %.6D %R"'
 alias zj='zellij'
 
