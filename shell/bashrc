@@ -73,6 +73,19 @@ function which {
 alias sq='squeue -o "%.10i %.15P %.15j %.15u %.2t %.10M %.6D %R"'
 alias zj='zellij'
 
+# Short commands for the account's three storage areas.
+nfs() {
+  cd "$IPRC_SHARED_ROOT" || return
+}
+
+share() {
+  cd /share/personal/S/wenzhiyang || return
+}
+
+ws() {
+  cd /workspace/S/wenzhiyang || return
+}
+
 __iprc_hostname="$(hostname -s 2>/dev/null || hostname)"
 if [ "$__iprc_hostname" != RockyOS8-Login0 ]; then
   alias rocky='ssh wenzhiyang@RockyOS8-Login0'

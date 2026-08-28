@@ -41,6 +41,8 @@ The shell PATH order is platform override, common runtime, then local user paths
 - The loader sources `/nfs_global/S/wenzhiyang/dotfiles/shell/bashrc`.
 - Keeping the loader local gives a basic PATH and warning if NFS is unavailable.
 - CentOS defines `rocky` as an alias for SSH to `RockyOS8-Login0`.
+- Interactive shells define `nfs`, `share`, and `ws` to enter the account's
+  NFS, personal share, and node-local workspace directories respectively.
 - `which conda` is intentionally handled by the shared Bash configuration so it prints the real executable instead of a function body.
 - After changing shared shell configuration, test a fresh login shell on both nodes. An already-open shell may require `exec bash -l`.
 
