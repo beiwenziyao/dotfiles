@@ -1,6 +1,6 @@
 # dotfiles
 
-个人终端偏好库：zellij + nvim + yazi 三件套配置。IPRC 上的程序与插件安装到共享 NFS，其他机器回退到当前用户的 `~/.local`；不需要管理员权限，也不调用系统包管理器。
+个人终端偏好库：zellij + nvim + yazi 三件套配置。所有程序、插件和配置都安装在当前用户目录，不需要管理员权限，也不调用系统包管理器。
 
 ## 包含内容
 
@@ -10,7 +10,6 @@
 | `nvim/` | `init.vim` + `vimrc`（vim-plug: NERDTree/Tagbar/airline 等） | `~/.config/nvim/`、`~/.vimrc` |
 | `yazi/` | 最小配置（编辑打开走 nvim） | `~/.config/yazi/yazi.toml` |
 | `starship.toml` | 彩色提示符（codex 配色分段显示 user/dir/git/env/time） | `~/.config/starship.toml` |
-| `shell/` | IPRC 共享 Bash 配置、共享 Conda 初始化与本地入口模板 | 由 `~/.bashrc` 加载 |
 
 ## 一键安装
 
@@ -22,28 +21,20 @@ cd ~/dotfiles && ./install.sh
 脚本会：
 1. 安装 zellij（GitHub release 的 musl 构建）
 2. 安装 yazi 和配套的 `ya`（GitHub musl 构建）
-3. 安装 starship，并让 `~/.bashrc` 加载仓库中的共享 shell 配置
-4. 安装 neovim（共享 runtime 固定使用两端都验证过的 v0.11.5 旧 glibc 兼容构建）
-5. 安装一份共享的 vim-plug，插件统一放在共享 runtime
+3. 安装 starship，并向 `~/.bashrc` 添加用户级 PATH、提示符初始化和 `zj` 别名
+4. 安装 neovim（CentOS 7 等旧 glibc 系统使用已验证的 v0.11.5 兼容构建）
+5. 安装 vim-plug；插件默认放在 `~/.local/vim/plugged`
 6. 将配置软链接到 `$HOME`（已有文件自动备份为 `.bak.*`）
 
 脚本不会写入 `/usr`、`/opt` 等系统目录。需要系统预先提供 Bash、curl、tar、unzip 等基础工具；缺少这些工具时脚本会报错退出，而不会尝试修改系统环境。
 
-## IPRC 双登录节点共享配置
+默认运行目录为 `~/.local`。如需安装到其他用户可写目录，可在执行时指定：
 
-CentOS 7 与 Rocky 8 共用以下 NFS 路径：
+```bash
+DOTFILES_RUNTIME_ROOT=/path/to/runtime ./install.sh
+```
 
-    /nfs_global/S/wenzhiyang/dotfiles
-    /nfs_global/S/wenzhiyang/runtime/common
-    /nfs_global/S/wenzhiyang/runtime/conda-common
-
-`runtime/common/bin` 保存 Starship、Yazi、`ya`、Zellij 和 Neovim 的公共命令；`runtime/common/vim` 保存 vim-plug 与插件。共享 PATH 的优先级为“平台覆盖目录 → common → `~/.local/bin`”，以后只有确实不兼容的程序才需要放进 `runtime/platform/<系统>/bin`。
-
-两边的 `~/dotfiles` 与 `~/anaconda3` 分别链接到上述目录；每台节点保留一个很薄的本地 `~/.bashrc`，负责加载 `shell/bashrc`。默认进入交互式 Bash 后自动激活共享的 `test` 环境。临时禁用自动激活可在启动 shell 前设置 `IPRC_CONDA_AUTO_ACTIVATE=0`。
-
-在 IPRC 上重复运行安装脚本时，已有的共享程序会直接跳过，不会在两个登录节点各下载一次。可用 `DOTFILES_RUNTIME_ROOT` 显式覆盖安装目录。
-
-`.ssh`、`.gnupg`、`.bash_history`、`.cache`、`.local/state` 和 `.vscode-server` 等凭据或机器状态仍留在各自的 HOME，不放到共享目录。
+该变量也会用于确定 Vim/Neovim 插件目录。自定义路径需要在后续 shell 中继续导出 `DOTFILES_RUNTIME_ROOT`。
 
 国内网络拉不到 GitHub 时：
 

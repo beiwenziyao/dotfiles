@@ -1,18 +1,12 @@
 #!/usr/bin/env bash
 # dotfiles 一键安装脚本
-# 在共享 NFS runtime 安装 zellij / nvim / yazi / starship 并链接配置到 $HOME
+# 在当前用户目录安装 zellij / nvim / yazi / starship 并链接配置到 $HOME
 # 用法: ./install.sh [--link-only]
 set -euo pipefail
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [ -n "${DOTFILES_RUNTIME_ROOT:-}" ]; then
-  RUNTIME_ROOT="$DOTFILES_RUNTIME_ROOT"
-elif [ -d /nfs_global/S/wenzhiyang ] && [ -w /nfs_global/S/wenzhiyang ]; then
-  RUNTIME_ROOT=/nfs_global/S/wenzhiyang/runtime/common
-else
-  RUNTIME_ROOT="$HOME/.local"
-fi
+RUNTIME_ROOT="${DOTFILES_RUNTIME_ROOT:-$HOME/.local}"
 BIN_DIR="$RUNTIME_ROOT/bin"
 OPT_DIR="$RUNTIME_ROOT/opt"
 VIM_RUNTIME="$RUNTIME_ROOT/vim"
@@ -148,10 +142,7 @@ install_nvim() {
 
   local repo="neovim/neovim" glibc_version="" glibc_major="" glibc_minor=""
   local ver tmp tarball extracted install_dir actual_ver
-  if [ "$RUNTIME_ROOT" = /nfs_global/S/wenzhiyang/runtime/common ]; then
-    repo="neovim/neovim-releases"
-    say "共享 runtime 使用 Neovim v0.11.5 旧 glibc 兼容构建"
-  elif command -v getconf >/dev/null 2>&1; then
+  if command -v getconf >/dev/null 2>&1; then
     glibc_version="$(getconf GNU_LIBC_VERSION 2>/dev/null | awk '{print $2}')"
     IFS=. read -r glibc_major glibc_minor _ <<< "$glibc_version"
     if [[ "$glibc_major" =~ ^[0-9]+$ && "$glibc_minor" =~ ^[0-9]+$ ]] &&
@@ -207,17 +198,24 @@ install_vim_plug() {
 }
 
 setup_bashrc() {
-  local begin="# >>> dotfiles: shared shell >>>"
+  local begin="# >>> dotfiles: user environment >>>"
   if ! grep -Fq "$begin" "$HOME/.bashrc" 2>/dev/null; then
     cat >> "$HOME/.bashrc" <<'EOF'
 
-# >>> dotfiles: shared shell >>>
-if [ -r "$HOME/dotfiles/shell/bashrc" ]; then
-  . "$HOME/dotfiles/shell/bashrc"
+# >>> dotfiles: user environment >>>
+export DOTFILES_RUNTIME_ROOT="${DOTFILES_RUNTIME_ROOT:-$HOME/.local}"
+case ":$PATH:" in
+  *":$DOTFILES_RUNTIME_ROOT/bin:"*) ;;
+  *) PATH="$DOTFILES_RUNTIME_ROOT/bin:$PATH" ;;
+esac
+export PATH
+alias zj='zellij'
+if command -v starship >/dev/null 2>&1; then
+  eval "$(starship init bash)"
 fi
-# <<< dotfiles: shared shell <<<
+# <<< dotfiles: user environment <<<
 EOF
-    say "已向 ~/.bashrc 追加共享 shell 配置入口"
+    say "已向 ~/.bashrc 追加当前用户的 PATH、Starship 和 zj 别名"
   else
     say "~/.bashrc 已有 dotfiles 配置，跳过"
   fi
