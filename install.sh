@@ -203,9 +203,6 @@ install_vim_plug() {
       warn "vim-plug 下载失败(网络), 继续执行"
     fi
   fi
-  if [ -f "$VIM_RUNTIME/autoload/plug.vim" ]; then
-    link "$VIM_RUNTIME/autoload/plug.vim" "$HOME/.vim/autoload/plug.vim"
-  fi
   say "运行 :PlugInstall 安装 vim 插件 (进入 nvim 后执行 PlugInstall)"
 }
 
@@ -259,6 +256,9 @@ main() {
   for cmd in starship yazi ya zellij nvim; do
     [ -x "$BIN_DIR/$cmd" ] && link "$BIN_DIR/$cmd" "$HOME/.local/bin/$cmd"
   done
+  if [ -f "$VIM_RUNTIME/autoload/plug.vim" ]; then
+    link "$VIM_RUNTIME/autoload/plug.vim" "$HOME/.vim/autoload/plug.vim"
+  fi
 
   link "$DOTFILES/starship.toml"            "$HOME/.config/starship.toml"
   link "$DOTFILES/zellij/config.kdl"        "$HOME/.config/zellij/config.kdl"
