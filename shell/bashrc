@@ -51,7 +51,7 @@ if [ "$__iprc_hostname" != RockyOS8-Login0 ]; then
 fi
 
 if [ -r /tools/module_env.sh ]; then
-  . /tools/module_env.sh
+  . /tools/module_env.sh >/dev/null 2>&1
   if type module >/dev/null 2>&1; then
     module load slurm-tools >/dev/null 2>&1 || true
     module load cluster-tools >/dev/null 2>&1 || true
