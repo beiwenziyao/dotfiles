@@ -1,0 +1,80 @@
+# Shared interactive Bash configuration for the IPRC login nodes.
+# Keep machine-local secrets, history, caches and editor/server state out of here.
+
+case $- in
+  *i*) ;;
+  *) return ;;
+esac
+
+if [ -n "${IPRC_SHARED_BASHRC_LOADED:-}" ]; then
+  return
+fi
+export IPRC_SHARED_BASHRC_LOADED=1
+
+export IPRC_SHARED_ROOT="${IPRC_SHARED_ROOT:-/nfs_global/S/wenzhiyang}"
+export IPRC_CONDA_ROOT="${IPRC_CONDA_ROOT:-$IPRC_SHARED_ROOT/runtime/conda-common}"
+
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) ;;
+  *) PATH="$HOME/.local/bin:$PATH" ;;
+esac
+case ":$PATH:" in
+  *":$HOME/bin:"*) ;;
+  *) PATH="$HOME/bin:$PATH" ;;
+esac
+export PATH
+
+if [ -x "$IPRC_CONDA_ROOT/bin/conda" ]; then
+  __iprc_conda_setup="$("$IPRC_CONDA_ROOT/bin/conda" shell.bash hook 2>/dev/null)"
+  if [ $? -eq 0 ]; then
+    eval "$__iprc_conda_setup"
+  elif [ -r "$IPRC_CONDA_ROOT/etc/profile.d/conda.sh" ]; then
+    . "$IPRC_CONDA_ROOT/etc/profile.d/conda.sh"
+  else
+    export PATH="$IPRC_CONDA_ROOT/bin:$PATH"
+  fi
+  unset __iprc_conda_setup
+
+  if [ "${IPRC_CONDA_AUTO_ACTIVATE:-1}" = 1 ] &&
+     [ -d "$IPRC_CONDA_ROOT/envs/test" ] &&
+     [ "${CONDA_DEFAULT_ENV:-}" != test ]; then
+    conda activate test
+  fi
+fi
+
+alias sq='squeue -o "%.10i %.15P %.15j %.15u %.2t %.10M %.6D %R"'
+alias zj='zellij'
+
+__iprc_hostname="$(hostname -s 2>/dev/null || hostname)"
+if [ "$__iprc_hostname" != RockyOS8-Login0 ]; then
+  alias rocky='ssh wenzhiyang@RockyOS8-Login0'
+fi
+
+if [ -r /tools/module_env.sh ]; then
+  . /tools/module_env.sh
+  if type module >/dev/null 2>&1; then
+    module load slurm-tools >/dev/null 2>&1 || true
+    module load cluster-tools >/dev/null 2>&1 || true
+  fi
+fi
+
+if [[ "$__iprc_hostname" =~ ^eda-0[0-3]$ ]]; then
+  __iprc_eda_num="${__iprc_hostname#eda-}"
+  __iprc_eda_script="/eda-tools/eda-software/synopsys/source-scripts/bash_eda${__iprc_eda_num}"
+  [ -r "$__iprc_eda_script" ] && . "$__iprc_eda_script"
+  export DESIGNWARE_HOME=/eda-tools/eda-software/synopsys/DESIGNWARE/O-2018.09
+elif [[ "$__iprc_hostname" =~ ^eda-0[4-9]$ || "$__iprc_hostname" = eda-10 ]]; then
+  __iprc_eda_num="${__iprc_hostname#eda-}"
+  __iprc_eda_script="/centos7/eda-tools/eda-software/synopsys/source-scripts/bash_eda${__iprc_eda_num}"
+  [ -r "$__iprc_eda_script" ] && . "$__iprc_eda_script"
+  export DESIGNWARE_HOME=/centos7/eda-tools/eda-software/synopsys/DESIGNWARE/O-2018.09
+fi
+unset __iprc_hostname __iprc_eda_num __iprc_eda_script
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
+
+if command -v starship >/dev/null 2>&1; then
+  eval "$(starship init bash)"
+fi

@@ -193,16 +193,17 @@ install_vim_plug() {
 }
 
 setup_bashrc() {
-  if ! grep -q "starship init" "$HOME/.bashrc" 2>/dev/null; then
+  local begin="# >>> dotfiles: shared shell >>>"
+  if ! grep -Fq "$begin" "$HOME/.bashrc" 2>/dev/null; then
     cat >> "$HOME/.bashrc" <<'EOF'
 
-# >>> dotfiles: PATH + starship >>>
-export PATH="$HOME/.local/bin:$PATH"
-eval "$(starship init bash)"
-alias zj='zellij'
-# <<< dotfiles <<<
+# >>> dotfiles: shared shell >>>
+if [ -r "$HOME/dotfiles/shell/bashrc" ]; then
+  . "$HOME/dotfiles/shell/bashrc"
+fi
+# <<< dotfiles: shared shell <<<
 EOF
-    say "已向 ~/.bashrc 追加 PATH + starship + zj 别名"
+    say "已向 ~/.bashrc 追加共享 shell 配置入口"
   else
     say "~/.bashrc 已有 dotfiles 配置，跳过"
   fi
